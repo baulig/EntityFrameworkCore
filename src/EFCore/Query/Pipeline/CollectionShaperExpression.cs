@@ -33,14 +33,11 @@ namespace Microsoft.EntityFrameworkCore.Query.Pipeline
         }
 
         public CollectionShaperExpression Update(ProjectionBindingExpression projection, Expression innerShaper)
-        {
-            return projection != Projection || innerShaper != InnerShaper
+            => projection != Projection || innerShaper != InnerShaper
                 ? new CollectionShaperExpression(projection, innerShaper, Navigation, ElementType)
                 : this;
-        }
 
         public override ExpressionType NodeType => ExpressionType.Extension;
-
         public override Type Type => Navigation?.ClrType ?? typeof(List<>).MakeGenericType(ElementType);
 
         public ProjectionBindingExpression Projection { get; }

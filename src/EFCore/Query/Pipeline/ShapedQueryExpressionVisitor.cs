@@ -34,7 +34,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Pipeline
         private readonly Expression _cancellationTokenParameter;
         private readonly EntityMaterializerInjectingExpressionVisitor _entityMaterializerInjectingExpressionVisitor;
 
-        public ShapedQueryCompilingExpressionVisitor(
+        protected ShapedQueryCompilingExpressionVisitor(
             QueryCompilationContext queryCompilationContext,
             IEntityMaterializerSource entityMaterializerSource)
         {
@@ -156,7 +156,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Pipeline
             IPropertyBase property)
             => _entityMaterializerSource.CreateReadValueExpression(valueBufferExpression, type, index, property);
 
-        protected virtual Expression InjectEntityMaterializer(Expression expression)
+        protected virtual Expression InjectEntityMaterializers(Expression expression)
             => _entityMaterializerInjectingExpressionVisitor.Inject(expression);
 
         private class EntityMaterializerInjectingExpressionVisitor : ExpressionVisitor
@@ -196,12 +196,13 @@ namespace Microsoft.EntityFrameworkCore.Query.Pipeline
 
             protected override Expression VisitExtension(Expression extensionExpression)
             {
-                if (extensionExpression is EntityShaperExpression entityShaperExpression)
+                switch (extensionExpression)
                 {
-                    return ProcessEntityShaper(entityShaperExpression);
+                    case EntityShaperExpression entityShaperExpression:
+                        return ProcessEntityShaper(entityShaperExpression);
+                    default:
+                        return base.VisitExtension(extensionExpression);
                 }
-
-                return base.VisitExtension(extensionExpression);
             }
 
             private Expression ProcessEntityShaper(EntityShaperExpression entityShaperExpression)
@@ -278,12 +279,12 @@ namespace Microsoft.EntityFrameworkCore.Query.Pipeline
                                 entry,
                                 Expression.Constant(default(InternalEntityEntry), typeof(InternalEntityEntry))),
                             Expression.Block(
-                                Expression.Assign(instanceVariable, Expression.Convert(
-                                    Expression.MakeMemberAccess(entry, _entityMemberInfo),
-                                    entityType.ClrType)),
                                 Expression.Assign(
                                     concreteEntityTypeVariable,
-                                    Expression.MakeMemberAccess(entry, _entityTypeMemberInfo))),
+                                    Expression.MakeMemberAccess(entry, _entityTypeMemberInfo)),
+                                Expression.Assign(instanceVariable, Expression.Convert(
+                                    Expression.MakeMemberAccess(entry, _entityMemberInfo),
+                                    entityType.ClrType))),
                             MaterializeEntity(entityType, materializationContextVariable, concreteEntityTypeVariable, instanceVariable))));
                 }
                 else

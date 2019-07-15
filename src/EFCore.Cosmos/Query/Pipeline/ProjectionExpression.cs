@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Query.Expressions.Internal;
 using Microsoft.EntityFrameworkCore.Query.Internal;
@@ -44,7 +43,8 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
         private string GetName()
             => (Expression as KeyAccessExpression)?.Name
                 ?? (Expression as ObjectAccessExpression)?.Name
-                ?? (Expression as EntityProjectionExpression)?.Alias;
+                ?? (Expression as EntityProjectionExpression)?.Name
+                ?? (Expression as ArrayProjectionExpression)?.Name;
 
         public override bool Equals(object obj)
             => obj != null
@@ -56,6 +56,6 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
             => string.Equals(Alias, projectionExpression.Alias)
             && Expression.Equals(projectionExpression.Expression);
 
-        public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Alias, Expression);
+        public override int GetHashCode() => HashCode.Combine(Alias, Expression);
     }
 }

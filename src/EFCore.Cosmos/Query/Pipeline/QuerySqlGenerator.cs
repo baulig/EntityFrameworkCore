@@ -70,9 +70,16 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
 
         protected override Expression VisitEntityProjection(EntityProjectionExpression entityProjectionExpression)
         {
-            _sqlBuilder.Append(entityProjectionExpression.Alias);
+            Visit(entityProjectionExpression.AccessExpression);
 
             return entityProjectionExpression;
+        }
+
+        protected override Expression VisitArrayProjection(ArrayProjectionExpression arrayProjectionExpression)
+        {
+            Visit(arrayProjectionExpression.EntityExpression);
+
+            return arrayProjectionExpression;
         }
 
         protected override Expression VisitKeyAccess(KeyAccessExpression keyAccessExpression)
@@ -103,10 +110,9 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
         }
 
         private string GetName(ProjectionExpression projectionExpression)
-        {
-            return (projectionExpression.Expression as KeyAccessExpression)?.Name
-                ?? (projectionExpression.Expression as EntityProjectionExpression)?.Alias;
-        }
+            => (projectionExpression.Expression as KeyAccessExpression)?.Name
+               ?? (projectionExpression.Expression as EntityProjectionExpression)?.Name
+               ?? (projectionExpression.Expression as ArrayProjectionExpression)?.Name;
 
         protected override Expression VisitRootReference(RootReferenceExpression rootReferenceExpression)
         {

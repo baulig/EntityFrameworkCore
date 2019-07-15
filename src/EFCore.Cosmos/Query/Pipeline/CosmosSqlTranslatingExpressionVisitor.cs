@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Query.Expressions.Internal;
+using Microsoft.EntityFrameworkCore.Query.NavigationExpansion;
 using Microsoft.EntityFrameworkCore.Query.Pipeline;
 
 namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
@@ -55,12 +56,9 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
             protected override Expression VisitExtension(Expression node)
             {
                 if (node is SqlExpression sqlExpression
-                    && !(node is ObjectAccessExpression))
+                    && sqlExpression.TypeMapping == null)
                 {
-                    if (sqlExpression.TypeMapping == null)
-                    {
-                        throw new InvalidOperationException("Null TypeMapping in Sql Tree");
-                    }
+                    throw new InvalidOperationException("Null TypeMapping in Sql Tree");
                 }
 
                 return base.VisitExtension(node);
@@ -81,7 +79,7 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
                 : _memberTranslatorProvider.Translate((SqlExpression)innerExpression, memberExpression.Member, memberExpression.Type);
         }
 
-        private bool TryBindProperty(Expression source, MemberIdentity member, out SqlExpression expression)
+        private bool TryBindProperty(Expression source, MemberIdentity member, out Expression expression)
         {
             if (source is EntityProjectionExpression entityProjectionExpression)
             {
@@ -101,24 +99,6 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
                 expression = entityProjectionExpression.BindNavigation(navigation);
                 return true;
             }
-            else if (source is ObjectAccessExpression objectAccessExpression)
-            {
-                var entityType = objectAccessExpression.Navigation.GetTargetType();
-                var property = member.MemberInfo != null
-                    ? entityType.FindProperty(member.MemberInfo)
-                    : entityType.FindProperty(member.Name);
-                if (property != null)
-                {
-                    expression = new KeyAccessExpression(property, objectAccessExpression);
-                    return true;
-                }
-
-                var navigation = member.MemberInfo != null
-                    ? entityType.FindNavigation(member.MemberInfo)
-                    : entityType.FindNavigation(member.Name);
-                expression = new ObjectAccessExpression(navigation, objectAccessExpression);
-                return true;
-            }
 
             expression = null;
             return false;
@@ -130,8 +110,9 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
             {
                 if (!TryBindProperty(Visit(source), MemberIdentity.Create(propertyName), out var result))
                 {
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"Property {propertyName} not found on {source}");
                 }
+
                 return result;
             }
 
@@ -180,28 +161,27 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
 
         private static Expression TryRemoveImplicitConvert(Expression expression)
         {
-            if (expression is UnaryExpression unaryExpression)
+            if (expression is UnaryExpression unaryExpression
+                && (unaryExpression.NodeType == ExpressionType.Convert
+                    || unaryExpression.NodeType == ExpressionType.ConvertChecked))
             {
-                if (unaryExpression.NodeType == ExpressionType.Convert
-                    || unaryExpression.NodeType == ExpressionType.ConvertChecked)
+                var innerType = unaryExpression.Operand.Type.UnwrapNullableType();
+                if (innerType.IsEnum)
                 {
-                    var innerType = unaryExpression.Operand.Type.UnwrapNullableType();
-                    if (innerType.IsEnum)
-                    {
-                        innerType = Enum.GetUnderlyingType(innerType);
-                    }
-                    var convertedType = unaryExpression.Type.UnwrapNullableType();
+                    innerType = Enum.GetUnderlyingType(innerType);
+                }
 
-                    if (innerType == convertedType
-                        || (convertedType == typeof(int)
-                            && (innerType == typeof(byte)
-                                || innerType == typeof(sbyte)
-                                || innerType == typeof(char)
-                                || innerType == typeof(short)
-                                || innerType == typeof(ushort))))
-                    {
-                        return TryRemoveImplicitConvert(unaryExpression.Operand);
-                    }
+                var convertedType = unaryExpression.Type.UnwrapNullableType();
+
+                if (innerType == convertedType
+                    || (convertedType == typeof(int)
+                        && (innerType == typeof(byte)
+                            || innerType == typeof(sbyte)
+                            || innerType == typeof(char)
+                            || innerType == typeof(short)
+                            || innerType == typeof(ushort))))
+                {
+                    return TryRemoveImplicitConvert(unaryExpression.Operand);
                 }
             }
 
@@ -336,6 +316,9 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Pipeline
 
                 case NullConditionalExpression nullConditionalExpression:
                     return Visit(nullConditionalExpression.AccessOperation);
+
+                case IncludeExpression includeExpression:
+                    return Visit(includeExpression.EntityExpression);
 
                 default:
                     return null;

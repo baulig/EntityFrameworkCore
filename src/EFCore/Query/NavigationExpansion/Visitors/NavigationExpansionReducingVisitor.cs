@@ -4,6 +4,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -19,12 +20,12 @@ namespace Microsoft.EntityFrameworkCore.Query.NavigationExpansion.Visitors
             switch (extensionExpression)
             {
                 case NavigationBindingExpression navigationBindingExpression:
-                    {
-                        return navigationBindingExpression.RootParameter.BuildPropertyAccess(navigationBindingExpression.NavigationTreeNode.ToMapping);
-                    }
+                    return navigationBindingExpression.RootParameter.BuildPropertyAccess(
+                        navigationBindingExpression.NavigationTreeNode.ToMapping);
 
                 case NavigationExpansionRootExpression navigationExpansionRootExpression:
                     return Visit(navigationExpansionRootExpression.Unwrap());
+
                 case NavigationExpansionExpression navigationExpansionExpression:
                     {
                         var includeResult = ApplyIncludes(navigationExpansionExpression);
@@ -39,7 +40,7 @@ namespace Microsoft.EntityFrameworkCore.Query.NavigationExpansion.Visitors
                             return result;
                         }
 
-                        var parameter = Expression.Parameter(result.Type.GetSequenceType());
+                        var parameterType = result.Type.GetSequenceType();
 
                         foreach (var pendingOrdering in state.PendingOrderings)
                         {
@@ -56,11 +57,11 @@ namespace Microsoft.EntityFrameworkCore.Query.NavigationExpansion.Visitors
                             var pendingSelectorBodyType = pendingSelector.Type.GetGenericArguments()[1];
 
                             var pendingSelectMethod = result.Type.IsGenericType && (result.Type.GetGenericTypeDefinition() == typeof(IEnumerable<>) || result.Type.GetGenericTypeDefinition() == typeof(IOrderedEnumerable<>))
-                                ? LinqMethodHelpers.EnumerableSelectMethodInfo.MakeGenericMethod(parameter.Type, pendingSelectorBodyType)
-                                : LinqMethodHelpers.QueryableSelectMethodInfo.MakeGenericMethod(parameter.Type, pendingSelectorBodyType);
+                                ? LinqMethodHelpers.EnumerableSelectMethodInfo.MakeGenericMethod(parameterType, pendingSelectorBodyType)
+                                : LinqMethodHelpers.QueryableSelectMethodInfo.MakeGenericMethod(parameterType, pendingSelectorBodyType);
 
                             result = Expression.Call(pendingSelectMethod, result, pendingSelector);
-                            parameter = Expression.Parameter(result.Type.GetSequenceType());
+                            parameterType = result.Type.GetSequenceType();
                         }
 
                         if (state.PendingCardinalityReducingOperator != null)
@@ -77,13 +78,14 @@ namespace Microsoft.EntityFrameworkCore.Query.NavigationExpansion.Visitors
                         {
                             if (navigationExpansionExpression.Type.GetGenericTypeDefinition() == typeof(IOrderedQueryable<>))
                             {
-                                var toOrderedQueryableMethodInfo = ToOrderedQueryableMethod.MakeGenericMethod(parameter.Type);
+                                var toOrderedQueryableMethodInfo = ToOrderedQueryableMethod.MakeGenericMethod(parameterType);
 
                                 return Expression.Call(toOrderedQueryableMethodInfo, result);
                             }
-                            else if (navigationExpansionExpression.Type.GetGenericTypeDefinition() == typeof(IOrderedEnumerable<>))
+
+                            if (navigationExpansionExpression.Type.GetGenericTypeDefinition() == typeof(IOrderedEnumerable<>))
                             {
-                                var toOrderedEnumerableMethodInfo = ToOrderedEnumerableMethod.MakeGenericMethod(parameter.Type);
+                                var toOrderedEnumerableMethodInfo = ToOrderedEnumerableMethod.MakeGenericMethod(parameterType);
 
                                 return Expression.Call(toOrderedEnumerableMethodInfo, result);
                             }

@@ -3,10 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 
 namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
@@ -15,6 +13,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
     {
         private readonly IDictionary<IProperty, ColumnExpression> _propertyExpressionsCache
             = new Dictionary<IProperty, ColumnExpression>();
+
         private readonly TableExpressionBase _innerTable;
         private readonly bool _nullable;
 
@@ -41,22 +40,20 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
                     ? new EntityProjectionExpression(EntityType, table, _nullable)
                     : this;
             }
-            else
+
+            var changed = false;
+            var newCache = new Dictionary<IProperty, ColumnExpression>();
+            foreach (var expression in _propertyExpressionsCache)
             {
-                var changed = false;
-                var newCache = new Dictionary<IProperty, ColumnExpression>();
-                foreach (var expression in _propertyExpressionsCache)
-                {
-                    var newExpression = (ColumnExpression)visitor.Visit(expression.Value);
-                    changed |= newExpression != expression.Value;
+                var newExpression = (ColumnExpression)visitor.Visit(expression.Value);
+                changed |= newExpression != expression.Value;
 
-                    newCache[expression.Key] = newExpression;
-                }
-
-                return changed
-                    ? new EntityProjectionExpression(EntityType, newCache)
-                    : this;
+                newCache[expression.Key] = newExpression;
             }
+
+            return changed
+                ? new EntityProjectionExpression(EntityType, newCache)
+                : this;
         }
 
         public EntityProjectionExpression MakeNullable()
@@ -65,16 +62,14 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
             {
                 return new EntityProjectionExpression(EntityType, _innerTable, true);
             }
-            else
-            {
-                var newCache = new Dictionary<IProperty, ColumnExpression>();
-                foreach (var expression in _propertyExpressionsCache)
-                {
-                    newCache[expression.Key] = expression.Value.MakeNullable();
-                }
 
-                return new EntityProjectionExpression(EntityType, newCache);
+            var newCache = new Dictionary<IProperty, ColumnExpression>();
+            foreach (var expression in _propertyExpressionsCache)
+            {
+                newCache[expression.Key] = expression.Value.MakeNullable();
             }
+
+            return new EntityProjectionExpression(EntityType, newCache);
         }
 
         public EntityProjectionExpression UpdateEntityType(IEntityType derivedType)
@@ -93,7 +88,8 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 
         public ColumnExpression BindProperty(IProperty property)
         {
-            if (!EntityType.GetTypesInHierarchy().Contains(property.DeclaringEntityType))
+            if (!EntityType.IsAssignableFrom(property.DeclaringEntityType)
+                && !property.DeclaringEntityType.IsAssignableFrom(EntityType))
             {
                 throw new InvalidOperationException(
                     $"Called EntityProjectionExpression.BindProperty() with incorrect IProperty. EntityType:{EntityType.DisplayName()}, Property:{property.Name}");
