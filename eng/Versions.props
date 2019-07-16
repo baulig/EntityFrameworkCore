@@ -64,7 +64,6 @@
     <RestoreSources Condition=" '$(DotNetBuildOffline)' != 'true' ">
       $(RestoreSources);
       https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
-      https://dotnetfeed.blob.core.windows.net/aspnet-extensions/index.json;
     </RestoreSources>
     <RestoreSources Condition="'$(DotNetBuildOffline)' != 'true' AND $(MicrosoftNetCompilersToolsetVersion.Contains('-')) ">
       $(RestoreSources);
@@ -73,7 +72,7 @@
     <RestoreSources>
       $(RestoreSources);
       /Workspace/Blazor/Extensions/artifacts/packages/Debug/Shipping/;
-      /Workspace/Blazor/Extensions/artifacts/packages/Debug/NonShipping\;
+      /Workspace/Blazor/Extensions/artifacts/packages/Debug/NonShipping/;
     </RestoreSources>
   </PropertyGroup>
 </Project>
