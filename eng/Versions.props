@@ -71,8 +71,8 @@
     </RestoreSources>
     <RestoreSources>
       $(RestoreSources);
-      /Workspace/Blazor/Extensions/artifacts/packages/Debug/Shipping/;
-      /Workspace/Blazor/Extensions/artifacts/packages/Debug/NonShipping/;
+      $(LocalBuildRoot)/Extensions/artifacts/packages/Debug/Shipping/;
+      $(LocalBuildRoot)/Extensions/artifacts/packages/Debug/NonShipping/;
     </RestoreSources>
   </PropertyGroup>
 </Project>
