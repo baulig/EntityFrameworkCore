@@ -1801,6 +1801,40 @@ namespace Microsoft.EntityFrameworkCore.Internal
             Assert.Equal(1, columns.Count);
         }
 
+        [Fact]
+        public void Column_and_table_comments()
+        {
+            var database = new DatabaseModel
+            {
+                Tables =
+                {
+                    new DatabaseTable
+                    {
+                        Name = "Table",
+                        Comment = "A table",
+                        Columns =
+                        {
+                            IdColumn,
+                            new DatabaseColumn
+                            {
+                                Name = "Column",
+                                StoreType = "int",
+                                Comment = "An int column"
+                            }
+                        }
+                    }
+                }
+            };
+
+            var model = _factory.Create(database, useDatabaseNames: false);
+
+            var table = model.FindEntityType("Table");
+            Assert.Equal("A table", table.GetComment());
+
+            var column = model.FindEntityType("Table").GetProperty("Column");
+            Assert.Equal("An int column", column.GetComment());
+        }
+
         public class FakePluralizer : IPluralizer
         {
             public string Pluralize(string name)

@@ -357,6 +357,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
             var annotations = entityType.GetAnnotations().ToList();
             RemoveAnnotation(ref annotations, CoreAnnotationNames.ConstructorBinding);
             RemoveAnnotation(ref annotations, RelationalAnnotationNames.TableName);
+            RemoveAnnotation(ref annotations, RelationalAnnotationNames.Comment);
             RemoveAnnotation(ref annotations, RelationalAnnotationNames.Schema);
             RemoveAnnotation(ref annotations, ScaffoldingAnnotationNames.DbSetName);
 
@@ -387,6 +388,13 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
             }
 
             lines.AddRange(GenerateAnnotations(annotations.Except(annotationsToRemove)));
+
+            if (entityType.GetComment() != null)
+            {
+                lines.Add(
+                    $".{nameof(RelationalEntityTypeBuilderExtensions.HasComment)}" +
+                    $"({_code.Literal(entityType.GetComment())})");
+            }
 
             AppendMultiLineFluentApi(entityType, lines);
 
@@ -606,6 +614,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
             RemoveAnnotation(ref annotations, CoreAnnotationNames.Unicode);
             RemoveAnnotation(ref annotations, RelationalAnnotationNames.DefaultValue);
             RemoveAnnotation(ref annotations, RelationalAnnotationNames.DefaultValueSql);
+            RemoveAnnotation(ref annotations, RelationalAnnotationNames.Comment);
             RemoveAnnotation(ref annotations, RelationalAnnotationNames.ComputedColumnSql);
             RemoveAnnotation(ref annotations, RelationalAnnotationNames.IsFixedLength);
             RemoveAnnotation(ref annotations, ScaffoldingAnnotationNames.ColumnOrdinal);
@@ -673,6 +682,13 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding.Internal
                 lines.Add(
                     $".{nameof(RelationalPropertyBuilderExtensions.HasDefaultValueSql)}" +
                     $"({_code.Literal(property.GetDefaultValueSql())})");
+            }
+
+            if (property.GetComment() != null)
+            {
+                lines.Add(
+                    $".{nameof(RelationalPropertyBuilderExtensions.HasComment)}" +
+                    $"({_code.Literal(property.GetComment())})");
             }
 
             if (property.GetComputedColumnSql() != null)

@@ -14,7 +14,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Pipeline
         private readonly IQueryableMethodTranslatingExpressionVisitorFactory _queryableMethodTranslatingExpressionVisitorFactory;
         private readonly IShapedQueryOptimizerFactory _shapedQueryOptimizerFactory;
         private readonly IShapedQueryCompilingExpressionVisitorFactory _shapedQueryCompilingExpressionVisitorFactory;
-        private readonly ICurrentDbContext _currentDbContext;
+        private readonly ICurrentDbContext _currentContext;
         private readonly IDbContextOptions _contextOptions;
         private readonly IDiagnosticsLogger<DbLoggerCategory.Query> _logger;
 
@@ -24,7 +24,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Pipeline
             IQueryableMethodTranslatingExpressionVisitorFactory queryableMethodTranslatingExpressionVisitorFactory,
             IShapedQueryOptimizerFactory shapedQueryOptimizerFactory,
             IShapedQueryCompilingExpressionVisitorFactory shapedQueryCompilingExpressionVisitorFactory,
-            ICurrentDbContext currentDbContext,
+            ICurrentDbContext currentContext,
             IDbContextOptions contextOptions,
             IDiagnosticsLogger<DbLoggerCategory.Query> logger)
         {
@@ -33,25 +33,21 @@ namespace Microsoft.EntityFrameworkCore.Query.Pipeline
             _queryableMethodTranslatingExpressionVisitorFactory = queryableMethodTranslatingExpressionVisitorFactory;
             _shapedQueryOptimizerFactory = shapedQueryOptimizerFactory;
             _shapedQueryCompilingExpressionVisitorFactory = shapedQueryCompilingExpressionVisitorFactory;
-            _currentDbContext = currentDbContext;
+            _currentContext = currentContext;
             _contextOptions = contextOptions;
             _logger = logger;
         }
 
         public QueryCompilationContext Create(bool async)
-        {
-            var queryCompilationContext = new QueryCompilationContext(
+            => new QueryCompilationContext(
                 _model,
                 _queryOptimizerFactory,
                 _queryableMethodTranslatingExpressionVisitorFactory,
                 _shapedQueryOptimizerFactory,
                 _shapedQueryCompilingExpressionVisitorFactory,
-                _currentDbContext,
+                _currentContext,
                 _contextOptions,
                 _logger,
                 async);
-
-            return queryCompilationContext;
-        }
     }
 }

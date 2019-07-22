@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Query.Internal;
@@ -159,9 +158,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions
         }
 
         private IEnumerable<IProperty> GetAllPropertiesInHierarchy(IEntityType entityType)
-        {
-            return entityType.GetTypesInHierarchy().SelectMany(e => e.GetDeclaredProperties());
-        }
+            => entityType.GetTypesInHierarchy().SelectMany(EntityTypeExtensions.GetDeclaredProperties);
 
         public void ReplaceProjectionMapping(IDictionary<ProjectionMember, Expression> projectionMapping)
         {
@@ -173,9 +170,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions
         }
 
         public Expression GetMappedProjection(ProjectionMember projectionMember)
-        {
-            return _projectionMapping[projectionMember];
-        }
+            => _projectionMapping[projectionMember];
 
         public int AddToProjection(SqlExpression sqlExpression)
         {
@@ -972,30 +967,33 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions
             var joinTable = new LeftJoinExpression(innerSelectExpression.Tables.Single(), joinPredicate);
             _tables.Add(joinTable);
 
-            var outerMemberInfo = transparentIdentifierType.GetTypeInfo().GetDeclaredField("Outer");
-            var projectionMapping = new Dictionary<ProjectionMember, Expression>();
-            foreach (var projection in _projectionMapping)
+            if (transparentIdentifierType != null)
             {
-                projectionMapping[projection.Key.ShiftMember(outerMemberInfo)] = projection.Value;
-            }
-
-            var innerMemberInfo = transparentIdentifierType.GetTypeInfo().GetDeclaredField("Inner");
-            foreach (var projection in innerSelectExpression._projectionMapping)
-            {
-                var projectionToAdd = projection.Value;
-                if (projectionToAdd is EntityProjectionExpression entityProjection)
+                var outerMemberInfo = transparentIdentifierType.GetTypeInfo().GetDeclaredField("Outer");
+                var projectionMapping = new Dictionary<ProjectionMember, Expression>();
+                foreach (var projection in _projectionMapping)
                 {
-                    projectionToAdd = entityProjection.MakeNullable();
-                }
-                else if (projectionToAdd is ColumnExpression column)
-                {
-                    projectionToAdd = column.MakeNullable();
+                    projectionMapping[projection.Key.ShiftMember(outerMemberInfo)] = projection.Value;
                 }
 
-                projectionMapping[projection.Key.ShiftMember(innerMemberInfo)] = projectionToAdd;
-            }
+                var innerMemberInfo = transparentIdentifierType.GetTypeInfo().GetDeclaredField("Inner");
+                foreach (var projection in innerSelectExpression._projectionMapping)
+                {
+                    var projectionToAdd = projection.Value;
+                    if (projectionToAdd is EntityProjectionExpression entityProjection)
+                    {
+                        projectionToAdd = entityProjection.MakeNullable();
+                    }
+                    else if (projectionToAdd is ColumnExpression column)
+                    {
+                        projectionToAdd = column.MakeNullable();
+                    }
 
-            _projectionMapping = projectionMapping;
+                    projectionMapping[projection.Key.ShiftMember(innerMemberInfo)] = projectionToAdd;
+                }
+
+                _projectionMapping = projectionMapping;
+            }
         }
 
         public void AddCrossJoin(SelectExpression innerSelectExpression, Type transparentIdentifierType)
