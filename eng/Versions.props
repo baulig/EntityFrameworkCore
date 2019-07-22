@@ -4,6 +4,11 @@
     <PreReleaseVersionLabel>preview8</PreReleaseVersionLabel>
     <IncludeSourceRevisionInInformationalVersion>False</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <LocalBuildRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..'))</LocalBuildRoot>
+  </PropertyGroup>
+  
   <PropertyGroup Label="Arcade settings">
     <!-- Opt-in to using the ref assembly version bundled with Arcade. -->
     <UsingToolNetFrameworkReferenceAssemblies>True</UsingToolNetFrameworkReferenceAssemblies>

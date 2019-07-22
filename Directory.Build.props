@@ -24,10 +24,6 @@
     <PackageProjectUrl>https://docs.microsoft.com/ef/core/</PackageProjectUrl>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <LocalBuildRoot>/Workspace/New-Blazor</LocalBuildRoot>
-  </PropertyGroup>
-  
   <!-- HACK: Work around dotnet/arcade#1373 -->
   <PropertyGroup>
     <NoWarn>$(NoWarn);NU5125</NoWarn>
